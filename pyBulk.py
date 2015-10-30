@@ -4,7 +4,7 @@ Simple Script to bulk mail multiple recipients
 """
 import json
 import sys
-# this invokes the secure SMTP protocol (port 465, uses SSL)
+# USE SMPT and starttls()
 from smtplib import SMTP as SMTP
 from email.MIMEText import MIMEText
 
@@ -28,7 +28,7 @@ def connect():
     # read config
     AUTH = readConfig()
 
-    #connect
+    #connect via SMTP and init starttls() by hand
     conn = SMTP(AUTH["HOST"])
     conn.ehlo()
     conn.starttls()
