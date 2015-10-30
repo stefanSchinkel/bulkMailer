@@ -1,93 +1,121 @@
 #! /usr/local/bin/python
+# pylint: disable=C0103, W0201
 """
-Simple Script to bulk mail multiple recipients
+Simple bulk mailer with a personal touch
 """
 import json
 import sys
-# USE SMPT and starttls()
-from smtplib import SMTP as SMTP
+import csv
+from smtplib import SMTP as SMTP # USE SMPT and starttls() not STMP_SSL
 from email.MIMEText import MIMEText
 
-
-def readConfig(configFile='conf.json'):
-    """ Read credentials from JSON
+class Bulkmailer(object):
+    """Bulkmailer class
     """
-    with open(configFile) as dataFile:
-        AUTH = json.load(dataFile)
+    def __init__(self, recipients):
+        """
+        Initialise Bulkmailer object providing the recipients file
 
-    return  AUTH
+        :param recipients: file containing recipients
+        :type recipients: string
 
-def connect():
-    """
-    Connect to SMTP server and return connection instance
+        """
+        # init some vals
+        self.recipients = recipients
+        self.subject = "Hello dear friend"
+        self.content = """
+Bulkmailer ftw!Bulkmailer ftw!Bulkmailer ftw!
+Bulkmailer ftw!Bulkmailer ftw!Bulkmailer ftw!
+Bulkmailer ftw!Bulkmailer ftw!Bulkmailer ftw!
+Bulkmailer ftw!Bulkmailer ftw!Bulkmailer ftw!
 
-    :returns: SMTP instancce
-    :rtype: smtplib.SMTP_SSL
-    """
+Bye,
+your Bulkmailer
+        """
 
-    # read config
-    AUTH = readConfig()
+        # get credentials
+        self.readConfig('conf.json')
 
-    #connect via SMTP and init starttls() by hand
-    conn = SMTP(AUTH["HOST"])
-    conn.ehlo()
-    conn.starttls()
-    conn.set_debuglevel(True)
-    # convert to python sring, unicode fails
-    conn.login(str(AUTH["USER"]), str(AUTH["PASS"]))
+    def setSalutation(self, salutation):
+        """ Set the default salutation
 
-    return conn
+        :param salutation: default salutation used if none given
+        :type salutation: string
+        """
 
-def sendMessage(sender, recipient, subject, content, msgType="plain"):
-    """
-    Send an email from <sender> to <recipient> with the subject <subject>
-    and the content <content>. The message type can be set.
+        self.salutation = salutation
 
-    :arg sender: from address
-    :arg recipient: to address
-    :arg subject: message subject
-    :arg content: message body
+    def readConfig(self, configFile):
+        """ Read credentials from JSON
+        """
+        with open(configFile) as dataFile:
+            data = json.load(dataFile)
 
-    :type sender: string
-    :type recipient: string
-    :type subject: string
-    :type content: string
+        self.HOST = data["HOST"]
+        self.PORT = data["PORT"]
+        self.USER = str(data["USER"])   # has to be str not u''
+        self.PASS = str(data["PASS"])   #   --""--
+        self.FROM = data["FROM"]
 
-    :returns: success
-    :rtype: bool
-    """
+    def connect(self):
+        """
+        Connect to SMTP server and store connection instance
+        """
+        #connect via SMTP and init starttls() by hand
+        self.conn = SMTP(self.HOST, self.PORT)
+        self.conn.ehlo()
+        self.conn.starttls()
+        self.conn.set_debuglevel(True)
+        self.conn.login(self.USER, self.PASS)
 
-    # connect to server
-    conn = connect()
+    def sendMessage(self, recipient, content, msgType="plain"):
+        """
+        Send the message to a <recipient>
+        """
 
+        # connect
+        self.connect()
 
-    # assemble message
-    msg = MIMEText(content, msgType)
-    msg['Subject'] =  subject
-    msg['From']  = sender
+        # assemble message
 
-    # and deliver
-    try:
-        conn.sendmail(sender, recipient, msg.as_string())
-    except Exception, exc:
-         sys.exit( "mail failed; %s" % str(exc) ) # give a error message
-    finally:
-        conn.close()
+        msg = MIMEText(content, msgType)
+        msg["Subject"] = self.subject
+        msg["From"] = self.FROM
 
-def main():
-    """ The thing as such
-    """
+        # and deliver
+        try:
+            self.conn.sendmail(self.FROM, recipient, msg.as_string())
+        except Exception, exc:
+            sys.exit("mail failed; %s" % str(exc)) # give a error message
+        finally:
+            self.conn.close()
 
+    def send(self):
+        """
+        The actual sending
+        """
 
-    # typical values for text_subtype are plain, html, xml
-    sender = "Foo@bar.baz"
-    recipient = 'foo@baz.bar'
-    subject = "Sent from Python"
-    content = "Test message"
-    msgType = "plain"
+        with open(self.recipients) as csvFile:
+            reader = csv.reader(csvFile)
+            for row in reader:
+                to = row[0]
+                # switch salutation
+                if len(row[1]) == 0:
+                    body = self.salutation + self.content
+                else:
+                    body = row[1] + self.content
 
-    sendMessage(sender, recipient, subject, content, msgType)
+                #send
+                self.sendMessage(to, body)
 
 
 if __name__ == '__main__':
-    main()
+
+    bm = Bulkmailer('contacts.csv')
+    bm.setSalutation('Dear somebody')
+    bm.send()
+
+
+
+
+
