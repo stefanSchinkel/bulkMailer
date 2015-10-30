@@ -1,0 +1,6 @@
+{
+  "HOST" : "stmp.provider.com",
+  "PORT" : 587,
+  "USER" : "user@provider.com",
+  "PASS" : "p4ssword"
+}
