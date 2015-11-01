@@ -20,6 +20,10 @@ class Bulkmailer(object):
         :type recipients: string
 
         """
+        # init a config dict to hold ports, logins etc
+        self.cfg = {}
+        self.cfg["SMTPdebug"] = True
+
         # init some vals
         self.recipients = recipients
         self.subject = "Hello dear friend"
@@ -51,22 +55,22 @@ your Bulkmailer
         with open(configFile) as dataFile:
             data = json.load(dataFile)
 
-        self.HOST = data["HOST"]
-        self.PORT = data["PORT"]
-        self.USER = str(data["USER"])   # has to be str not u''
-        self.PASS = str(data["PASS"])   #   --""--
-        self.FROM = data["FROM"]
+        self.cfg["HOST"] = data["HOST"]
+        self.cfg["PORT"] = data["PORT"]
+        self.cfg["USER"] = str(data["USER"])   # has to be str not u''
+        self.cfg["PASS"] = str(data["PASS"])   #   --""--
+        self.cfg["FROM"] = data["FROM"]
 
     def connect(self):
         """
         Connect to SMTP server and store connection instance
         """
         #connect via SMTP and init starttls() by hand
-        self.conn = SMTP(self.HOST, self.PORT)
+        self.conn = SMTP(self.cfg["HOST"], self.cfg["PORT"])
+        self.conn.set_debuglevel(self.cfg["SMTPdebug"])
         self.conn.ehlo()
         self.conn.starttls()
-        self.conn.set_debuglevel(True)
-        self.conn.login(self.USER, self.PASS)
+        self.conn.login(self.cfg["USER"], self.cfg["PASS"])
 
     def sendMessage(self, recipient, content, msgType="plain"):
         """
@@ -77,14 +81,13 @@ your Bulkmailer
         self.connect()
 
         # assemble message
-
         msg = MIMEText(content, msgType)
         msg["Subject"] = self.subject
-        msg["From"] = self.FROM
+        msg["From"] = self.cfg["FROM"]
 
         # and deliver
         try:
-            self.conn.sendmail(self.FROM, recipient, msg.as_string())
+            self.conn.sendmail(self.cfg["FROM"], recipient, msg.as_string())
         except Exception, exc:
             sys.exit("mail failed; %s" % str(exc)) # give a error message
         finally:
